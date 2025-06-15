@@ -1,3 +1,4 @@
+use chrono::Local;
 use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
@@ -77,7 +78,7 @@ async fn improve_task_with_llm(user_input: &str) -> Result<String, reqwest::Erro
     // Construct the prompt for the LLM.
     let prompt = format!(
         "Human: You are a helpful assistant. Take the following raw task and improve it for a markdown task list.
-        Make it clearer and more actionable. Add a single '- [ ]' prefix. Raw task: \"{}\"\n\nAssistant:",
+        Make it clearer and more actionable. Add a single '- [ ] 📋' prefix. Raw task: \"{}\"\n\nAssistant:",
         user_input
     );
 
@@ -136,12 +137,17 @@ async fn main() -> std::io::Result<()> {
                 .unwrap_or_else(|e| {
                     eprintln!("Failed to call LLM API: {}. Using original task.", e);
                     // Fallback if the API call completely fails
-                    format!("- [ ] {}", args.content)
+                    format!("- [ ] 📋{}", args.content)
                 });
+
+            let now = Local::now();
+            let now_formated = now.format("%d/%m/%Y %H:%M");
+
+            let task_content = format!("{} - 🕓{}", improved_content, now_formated);
 
             // 2. Write the *improved* content to the file.
             let mut file = OpenOptions::new().append(true).create(true).open(&path)?;
-            writeln!(file, "{}", improved_content)?;
+            writeln!(file, "{}", task_content)?;
 
             println!("\n✅ Successfully added improved task to {:?}", path);
             println!("   > {}", improved_content);
